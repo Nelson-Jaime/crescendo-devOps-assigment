@@ -44,11 +44,15 @@ Final state: the targeted apply creates **31 resources** (the first run's 30 plu
 
 Decision: the real code is not changed to suit the emulator ([ADR 0002](adr/0002-scope-and-validation-strategy.md)). `make floci-apply` applies the supported subset with `-target`; `FULL=1 make floci-apply` tries the whole stack again. The CI job runs a full `plan` against Floci (which exercises every resource and reference) and the subset apply.
 
+## GitHub Actions
+
+The workflow ran on a test pull request (`test/ci-verify`) and passed: `fmt, validate, tflint` (28 s) and `plan against Floci` (full plan plus the subset apply, 1 m 40 s) succeeded; `plan against AWS (optional)` was skipped as designed. Screenshot: `docs/evidence/ci-run-green.webp`. The only annotations were runner notices (Node.js 20 action deprecation, and `ubuntu-latest` moving to Ubuntu 26 on 2026-10-19), which is why the jobs now pin `ubuntu-24.04`.
+
 ## Static checks
 `terraform init -backend=false` + `terraform validate` (Terraform with AWS provider 5.100.0 and random 3.9.1: "The configuration is valid"), `terraform fmt`, tflint (terraform + aws rulesets), shellcheck on all scripts and on the rendered `user_data` (`docker/al2023/render.py` renders the template the way `templatefile()` does), workflow YAML parse.
 
 ## Not verified locally
-- The GitHub Actions run itself: the workflow has not run yet (it needs the repository on GitHub); every step it contains was run locally.
+- The optional real-AWS `plan` job (`plan-aws`): skipped by design because no `AWS_ROLE_ARN` is configured.
 - Floci coverage of the EC2 instance, the target-group attachment and CloudFront (see above).
 - The Amazon Linux 2023 provisioning path: `make al2023` (docker/al2023) runs the rendered `user_data` script in an AL2023 container with a `systemctl` stub (passing, see above). Still not covered: a real boot with systemd and cloud-init, and the unit's sandboxing options (`PrivateTmp`, `ProtectSystem`, `NoNewPrivileges`).
 - Everything that needs real AWS: security-group enforcement, ALB to instance traffic, CloudFront delivery, the secret-header rule.

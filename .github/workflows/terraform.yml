@@ -22,7 +22,7 @@ env:
 jobs:
   fmt-validate:
     name: fmt, validate, tflint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: infra
@@ -67,7 +67,7 @@ jobs:
   plan-emulator:
     name: plan against Floci (no credentials)
     needs: fmt-validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: infra
@@ -117,7 +117,7 @@ jobs:
     needs: fmt-validate
     # Runs only when a role is configured and the PR comes from this repository (never from forks).
     if: ${{ vars.AWS_ROLE_ARN != '' && github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write # GitHub OIDC -> AWS, no long-lived keys

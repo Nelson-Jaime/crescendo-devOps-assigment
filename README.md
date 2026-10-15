@@ -120,6 +120,8 @@ Evidence from the latest runs is stored in `docs/evidence/`; the story of what f
 
 *Magnolia CE public instance running in the smoke-test container, reached through Nginx on `localhost:8081`.*
 
+CI evidence: the workflow passed on a test pull request, with the Floci plan and subset apply included and the optional AWS job skipped because no role is configured (`docs/evidence/ci-run-green.webp`).
+
 ## Assumptions
 - A single environment in one region; `eu-west-1` by default.
 - No custom domain, so viewers use the `*.cloudfront.net` name and the default certificate.

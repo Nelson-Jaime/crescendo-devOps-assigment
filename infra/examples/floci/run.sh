@@ -18,13 +18,14 @@ fi
 export AWS_ENDPOINT_URL="$ENDPOINT" AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
 TF_ARGS=(-var-file=examples/floci/floci.tfvars)
 
-# Floci cannot complete three resources (details in docs/validation-log.md): the EC2 instance (it returns no instance
-# settings), the target-group attachment (needs the instance) and the CloudFront distribution (the AWS provider panics
-# on the emulator's response). `apply` therefore targets everything else. FULL=1 applies the whole stack.
+# Floci cannot complete four resources (details in docs/validation-log.md): the EC2 instance (it returns no instance
+# settings), the target-group attachment (needs the instance), the CloudFront distribution (the AWS provider panics
+# on the emulator's response), and the CloudFront-prefix-list ingress rule (floci.tfvars' cloudfront_prefix_list_id
+# is a placeholder; Floci rejects AuthorizeSecurityGroupIngress against a prefix list that doesn't exist in its
+# backend). `apply` therefore targets everything else. FULL=1 applies the whole stack.
 TARGETS=(
   -target=module.network
   -target=module.alb.aws_lb_listener_rule.origin_verified
-  -target=module.alb.aws_vpc_security_group_ingress_rule.from_cloudfront
   -target=module.alb.aws_vpc_security_group_egress_rule.to_targets
   -target=module.compute.aws_vpc_security_group_ingress_rule.from_alb
   -target=module.compute.aws_vpc_security_group_egress_rule.https

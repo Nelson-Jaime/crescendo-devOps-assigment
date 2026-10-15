@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (git-ignored) and adjust.
+project     = "crescendo"
+environment = "dev"
+aws_region  = "eu-west-1"
+
+# instance_type      = "t3.medium"
+# single_nat_gateway = true     # false = one NAT gateway per AZ (HA, higher cost)
+# expose_admin       = false    # keep false unless the default superuser password was changed

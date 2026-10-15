@@ -1,0 +1,30 @@
+# Amazon Linux 2023 provisioning test 2026-10-15T09:07:07Z
+Rendered provision.sh.tpl (8585 bytes, instance type default); bash syntax OK
+Container up: Amazon Linux 2023.12.20261013 (aarch64)
+Running provision.sh (dnf install, Tomcat download, Magnolia first start: several minutes)...
+provision.sh exit code: 0 after 173s (full output: docs/evidence/al2023-provision.log)
+PASS  provision.sh completed and Magnolia answered through Nginx
+INFO  openjdk version "11.0.32.1" 2026-08-18 LTS OpenJDK Runtime Environment Corretto-11.0.32.12.1 (build 11.0.32.1+12-LTS) 
+INFO  nginx version: nginx/1.30.5
+INFO  Tomcat: /opt/apache-tomcat-9.0.98
+PASS  Java is Amazon Corretto 11
+PASS  /opt/tomcat points at Tomcat 9.x
+PASS  JAVA_HOME in /etc/tomcat.env has bin/java
+PASS  Tomcat runs as the unprivileged user tomcat
+PASS  Nginx workers run as nginx
+PASS  Tomcat answers on 127.0.0.1:8080
+PASS  Tomcat is NOT reachable on the instance IP (loopback only)
+PASS  GET /.rest/status returns 200 through Nginx (ALB health check path)
+PASS  GET /nginx-health returns 200
+PASS  GET /.magnolia/ is blocked (403) by default
+PASS  anonymous visitors get the demo site (GET /travel/ is 200)
+PASS  redirects keep https when CloudFront-Forwarded-Proto=https
+PASS  Magnolia repository lives under /var/lib/magnolia, owned by tomcat
+PASS  Magnolia overrides appended exactly once
+PASS  provision log written to /var/log/provision.log
+Running provision.sh a second time (idempotency)...
+PASS  second run exits 0
+PASS  second run did not append the overrides again
+PASS  second run did not start a second Tomcat
+
+RESULT: all checks passed. Re-run with KEEP=1 to leave the container up and browse http://localhost:8082.

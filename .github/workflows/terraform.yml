@@ -1,0 +1,152 @@
+name: terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - "docker/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: "1.10.5"
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  fmt-validate:
+    name: fmt, validate, tflint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+
+      - name: tflint --init
+        run: tflint --init
+
+      - name: tflint
+        run: tflint --recursive --format compact
+
+      - name: shellcheck (scripts and the rendered user_data)
+        working-directory: .
+        run: |
+          python3 docker/al2023/render.py /tmp/provision.sh
+          shellcheck /tmp/provision.sh docker/smoke/*.sh docker/al2023/*.sh infra/examples/floci/run.sh
+
+      - name: Config scan (non-blocking)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          scan-type: config
+          scan-ref: infra
+          format: table
+          exit-code: "0"
+
+  plan-emulator:
+    name: plan against Floci (no credentials)
+    needs: fmt-validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    services:
+      floci:
+        image: floci/floci:latest
+        ports:
+          - 4566:4566
+        # EC2 in the emulator launches real containers through the Docker socket.
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        options: --user root
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform plan (whole stack)
+        run: terraform plan -input=false -var-file=examples/floci/floci.tfvars
+
+      # Applies the part of the stack the emulator can create and read back (see examples/floci/run.sh).
+      - name: terraform apply (emulator subset)
+        run: examples/floci/run.sh apply
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Emulator apply: resources in state"
+            echo '```'
+            terraform state list -state=floci.tfstate 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  plan-aws:
+    name: plan against AWS (optional)
+    needs: fmt-validate
+    # Runs only when a role is configured and the PR comes from this repository (never from forks).
+    if: ${{ vars.AWS_ROLE_ARN != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC -> AWS, no long-lived keys
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform plan
+        run: terraform plan -input=false -no-color | tee plan.txt
+
+      - name: Plan summary
+        run: |
+          {
+            echo "### terraform plan"
+            echo '```'
+            tail -n 60 plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

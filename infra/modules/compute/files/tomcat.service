@@ -1,0 +1,22 @@
+[Unit]
+Description=Apache Tomcat 9 (Magnolia CMS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tomcat
+Group=tomcat
+EnvironmentFile=/etc/tomcat.env
+ExecStart=/opt/tomcat/bin/catalina.sh run
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65535
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

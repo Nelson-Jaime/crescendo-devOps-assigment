@@ -1,0 +1,12 @@
+# Remote state for real use. Copy to backend.tf, fill in the bucket, then run `terraform init -migrate-state`.
+# The bucket must exist first, with versioning and default encryption enabled and public access blocked.
+# State contains the CloudFront origin secret: restrict access to it.
+terraform {
+  backend "s3" {
+    bucket       = "REPLACE-ME-terraform-state"
+    key          = "crescendo-devops-exam/terraform.tfstate"
+    region       = "eu-west-1"
+    encrypt      = true
+    use_lockfile = true # native S3 locking, Terraform >= 1.10 (no DynamoDB table needed)
+  }
+}

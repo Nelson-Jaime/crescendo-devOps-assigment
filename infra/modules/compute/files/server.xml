@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal Tomcat 9 configuration for Magnolia behind Nginx. -->
+<Server port="-1" shutdown="SHUTDOWN">
+  <Service name="Catalina">
+    <!-- Only Nginx on the same host can reach Tomcat. -->
+    <Connector port="8080" address="127.0.0.1" protocol="HTTP/1.1"
+               connectionTimeout="20000" maxPostSize="104857600" URIEncoding="UTF-8" />
+    <Engine name="Catalina" defaultHost="localhost">
+      <Host name="localhost" appBase="webapps" unpackWARs="false" autoDeploy="false" deployOnStartUp="true">
+        <!-- Honour X-Forwarded-* set by Nginx so Magnolia builds correct absolute URLs. -->
+        <Valve className="org.apache.catalina.valves.RemoteIpValve"
+               remoteIpHeader="X-Forwarded-For" protocolHeader="X-Forwarded-Proto"
+               internalProxies="127\.0\.0\.1|::1|0:0:0:0:0:0:0:1" />
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".txt" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+    </Engine>
+  </Service>
+</Server>

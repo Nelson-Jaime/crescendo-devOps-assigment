@@ -1,0 +1,18 @@
+# Magnolia smoke test 2026-10-14T18:58:05Z
+Building image with Java 11, Magnolia public instance (downloads Magnolia CE WAR and verifies its checksum)...
+Waiting for Magnolia (first start installs the modules and demo content, can take several minutes)...
+Magnolia REST status: HTTP 200 after about 20s (instance type: public)
+PASS  GET /.rest/status returns 200 through Nginx (ALB health check path)
+PASS  GET /nginx-health returns 200
+PASS  GET /.magnolia/ is blocked (403) by default
+INFO  GET / -> HTTP 302
+INFO  GET /travel/ -> HTTP 200
+INFO  Response headers for /: HTTP/1.1 302  Location: /travel.html 
+INFO  Demo site at /travel/, title: <title>Travel Home</title>
+PASS  anonymous visitors get a public page (200) through Nginx
+INFO  / with CloudFront-Forwarded-Proto=https, Host=demo.example.com -> Location: /travel.html
+INFO  /travel with CloudFront-Forwarded-Proto=https, Host=demo.example.com -> Location: <none>
+INFO  Files under /var/lib/magnolia (repository location override): 404
+PASS  repository written outside the webapp (/var/lib/magnolia)
+
+RESULT: all checks passed. Run 'docker run --rm -p 8081:80 magnolia-smoke:java11-public' to browse http://localhost:8081.

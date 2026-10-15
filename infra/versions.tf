@@ -1,4 +1,5 @@
 terraform {
+  # CI verification: confirms the terraform workflow runs green on a pull request.
   required_version = ">= 1.10.0"
 
   required_providers {

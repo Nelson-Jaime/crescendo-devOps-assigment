@@ -38,15 +38,21 @@ A second emulator quirk showed up when destroying: refreshing the state makes th
 
 A third quirk: Floci does not support `TagInstanceProfile` and returns no IAM tags on read. Creating the role and profile works (tags are sent at creation), but applying again on an existing state plans a `tags_all` update and fails with `UnsupportedOperation`. Hence "apply once per clean state" in `infra/examples/floci/README.md`; CI always starts from an empty emulator.
 
-Final state: the targeted apply creates **32 resources** (the first run's 30 plus the two ALB security-group rules), and `make floci-destroy` removes all 32 cleanly; `make floci-down` then removes the container and the state file.
+A fourth quirk, seen only once the stack ran in GitHub Actions (pulling `floci/floci:latest` fresh, vs. the pinned-by-accident local image used for the counts above): creating `module.alb.aws_vpc_security_group_ingress_rule.from_cloudfront` now fails with `InvalidPrefixListID.NotFound: The prefix list ID 'pl-00000000' does not exist`, because `floci.tfvars` sets `cloudfront_prefix_list_id` to a placeholder (the real `com.amazonaws.global.cloudfront.origin-facing` list doesn't exist in the emulator either, so a lookup by name isn't an option). This resource created successfully in earlier local runs, so the emulator's validation of prefix-list references appears to have tightened between image builds. The targeted apply no longer includes this resource; it's a Floci limitation, not a configuration error (the same block is valid for AWS).
+
+Final state: the targeted apply creates **31 resources** (the first run's 30 plus the instance security group's `from_alb` ingress rule; `from_cloudfront` is excluded per the fourth quirk above), and `make floci-destroy` removes them all cleanly; `make floci-down` then removes the container and the state file.
 
 Decision: the real code is not changed to suit the emulator ([ADR 0002](adr/0002-scope-and-validation-strategy.md)). `make floci-apply` applies the supported subset with `-target`; `FULL=1 make floci-apply` tries the whole stack again. The CI job runs a full `plan` against Floci (which exercises every resource and reference) and the subset apply.
+
+## GitHub Actions
+
+The workflow ran on a test pull request (`test/ci-verify`) and passed: `fmt, validate, tflint` (28 s) and `plan against Floci` (full plan plus the subset apply, 1 m 40 s) succeeded; `plan against AWS (optional)` was skipped as designed. Screenshot: `docs/evidence/ci-run-green.webp`. The only annotations were runner notices (Node.js 20 action deprecation, and `ubuntu-latest` moving to Ubuntu 26 on 2026-10-19), which is why the jobs now pin `ubuntu-24.04`.
 
 ## Static checks
 `terraform init -backend=false` + `terraform validate` (Terraform with AWS provider 5.100.0 and random 3.9.1: "The configuration is valid"), `terraform fmt`, tflint (terraform + aws rulesets), shellcheck on all scripts and on the rendered `user_data` (`docker/al2023/render.py` renders the template the way `templatefile()` does), workflow YAML parse.
 
 ## Not verified locally
-- The GitHub Actions run itself: the workflow has not run yet (it needs the repository on GitHub); every step it contains was run locally.
+- The optional real-AWS `plan` job (`plan-aws`): skipped by design because no `AWS_ROLE_ARN` is configured.
 - Floci coverage of the EC2 instance, the target-group attachment and CloudFront (see above).
 - The Amazon Linux 2023 provisioning path: `make al2023` (docker/al2023) runs the rendered `user_data` script in an AL2023 container with a `systemctl` stub (passing, see above). Still not covered: a real boot with systemd and cloud-init, and the unit's sandboxing options (`PrivateTmp`, `ProtectSystem`, `NoNewPrivileges`).
 - Everything that needs real AWS: security-group enforcement, ALB to instance traffic, CloudFront delivery, the secret-header rule.

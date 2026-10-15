@@ -5,7 +5,7 @@
 # configuration with AL2023's nginx package, and a second run of the script (idempotency).
 # Usage: [INSTANCE_TYPE=public|author] [JVM_HEAP_MB=1536] [KEEP=1] docker/al2023/test.sh [host-port]   (default 8082). Requires Docker and python3.
 # Writes docs/evidence/al2023-provision-test.txt (and al2023-diagnostics.txt on failure).
-# shellcheck disable=SC2016,SC2329  # single quotes are intended: the commands expand inside the container; cleanup runs via trap
+# shellcheck disable=SC2016,SC2329,SC2317  # single quotes are intended: the commands expand inside the container; cleanup runs via trap
 set -euo pipefail
 # The "[o]rg" pattern keeps pgrep -f from matching the bash -c process that runs the check itself.
 
